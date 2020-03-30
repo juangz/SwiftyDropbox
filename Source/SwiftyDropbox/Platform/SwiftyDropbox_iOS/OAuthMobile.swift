@@ -230,9 +230,11 @@ open class MobileSafariViewController: SFSafariViewController, SFSafariViewContr
     var cancelHandler: (() -> Void) = {}
 
     public init(url: URL, cancelHandler: @escaping (() -> Void)) {
-			  super.init(url: url, entersReaderIfAvailable: false)
+        let config = SFSafariViewController.Configuration()
+        config.entersReaderIfAvailable = false
+        super.init(url: url, configuration: config)
         self.cancelHandler = cancelHandler
-        self.delegate = self;
+        self.delegate = self
     }
 
     public func safariViewController(_ controller: SFSafariViewController, didCompleteInitialLoad didLoadSuccessfully: Bool) {
