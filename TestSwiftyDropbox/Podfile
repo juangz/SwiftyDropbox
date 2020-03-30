@@ -1,11 +1,12 @@
 use_frameworks!
 
 target "TestSwiftyDropbox_iOS" do
-    platform :ios, '9.0'
-    pod 'SwiftyDropbox', :path => '../'
+    platform :ios, '11.0'
+    pod 'SwiftyDropbox', :path => '~/Documents/Xcode_Projects/PetProjects/SwiftyDropbox'
 end
 
 target "TestSwiftyDropbox_macOS" do
     platform :osx, '10.11'
-    pod 'SwiftyDropbox', :path => '../'
+    # pod 'SwiftyDropbox', :path => '~/Documents/Xcode_Projects/PetProjects/SwiftyDropbox'
+
 end

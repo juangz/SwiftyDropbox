@@ -6,9 +6,9 @@ import Foundation
 import Alamofire
 
 open class DropboxTransportClient {
-    public let manager: SessionManager
-    public let backgroundManager: SessionManager
-    public let longpollManager: SessionManager
+    public let manager: Session
+    public let backgroundManager: Session
+    public let longpollManager: Session
     open var accessToken: String
     open var selectUser: String?
     open var pathRoot: Common.PathRoot?
@@ -19,32 +19,30 @@ open class DropboxTransportClient {
         self.init(accessToken: accessToken, baseHosts: nil, userAgent: nil, selectUser: selectUser, pathRoot: pathRoot)
     }
 
-    public init(accessToken: String, baseHosts: [String: String]?, userAgent: String?, selectUser: String?, sessionDelegate: SessionDelegate? = nil, backgroundSessionDelegate: SessionDelegate? = nil, longpollSessionDelegate: SessionDelegate? = nil, serverTrustPolicyManager: ServerTrustPolicyManager? = nil, sharedContainerIdentifier: String? = nil, pathRoot: Common.PathRoot? = nil) {
+    public init(accessToken: String, baseHosts: [String: String]?, userAgent: String?, selectUser: String?, sessionDelegate: SessionDelegate? = nil, backgroundSessionDelegate: SessionDelegate? = nil, longpollSessionDelegate: SessionDelegate? = nil, serverTrustPolicyManager: ServerTrustManager? = nil, sharedContainerIdentifier: String? = nil, pathRoot: Common.PathRoot? = nil) {
         let config = URLSessionConfiguration.default
         let delegate = sessionDelegate ?? SessionDelegate()
         let serverTrustPolicyManager = serverTrustPolicyManager ?? nil
+        
+        let manager = Session(configuration: config, delegate: delegate, startRequestsImmediately: false, serverTrustManager: serverTrustPolicyManager)
 
-        let manager = SessionManager(configuration: config, delegate: delegate, serverTrustPolicyManager: serverTrustPolicyManager)
-        manager.startRequestsImmediately = false
-
-        let backgroundManager = { () -> SessionManager in
+        let backgroundManager = { () -> Session in
             let backgroundConfig = URLSessionConfiguration.background(withIdentifier: "com.dropbox.SwiftyDropbox." + UUID().uuidString)
             if let sharedContainerIdentifier = sharedContainerIdentifier{
                 backgroundConfig.sharedContainerIdentifier = sharedContainerIdentifier
             }
             if let backgroundSessionDelegate = backgroundSessionDelegate {
-                return SessionManager(configuration: backgroundConfig, delegate: backgroundSessionDelegate, serverTrustPolicyManager: serverTrustPolicyManager)
+                return Session(configuration: backgroundConfig, delegate: backgroundSessionDelegate, serverTrustManager: serverTrustPolicyManager)
             }
-            return SessionManager(configuration: backgroundConfig, serverTrustPolicyManager: serverTrustPolicyManager)
+            return Session(configuration: backgroundConfig, startRequestsImmediately: false, serverTrustManager: serverTrustPolicyManager)
         }()
-        backgroundManager.startRequestsImmediately = false
 
         let longpollConfig = URLSessionConfiguration.default
         longpollConfig.timeoutIntervalForRequest = 480.0
 
         let longpollSessionDelegate = longpollSessionDelegate ?? SessionDelegate()
 
-        let longpollManager = SessionManager(configuration: longpollConfig, delegate: longpollSessionDelegate, serverTrustPolicyManager: serverTrustPolicyManager)
+        let longpollManager = Session(configuration: longpollConfig, delegate: longpollSessionDelegate, serverTrustManager: serverTrustPolicyManager)
 
         let defaultBaseHosts = [
             "api": "https://api.dropbox.com/2",
@@ -96,7 +94,7 @@ open class DropboxTransportClient {
 
         let customEncoding = SwiftyArgEncoding(rawJsonRequest: rawJsonRequest!)
 
-        let managerToUse = { () -> SessionManager in
+        let managerToUse = { () -> Session in
             // longpoll requests have a much longer timeout period than other requests
             if type(of: route) ==  type(of: Files.listFolderLongpoll) {
 				return self.longpollManager
@@ -175,7 +173,7 @@ open class DropboxTransportClient {
 
         weak var _self: DownloadRequestFile<RSerial, ESerial>!
 
-        let destinationWrapper: DownloadRequest.DownloadFileDestination = { url, resp in
+        let destinationWrapper: DownloadRequest.Destination = { url, resp in
             var finalUrl = destination(url, resp)
 
             if 200 ... 299 ~= resp.statusCode {
@@ -262,7 +260,8 @@ open class DropboxTransportClient {
                 headers["Dropbox-Api-Arg"] = value
             }
         }
-        return headers
+        
+        return HTTPHeaders(headers)
     }
 }
 
@@ -490,7 +489,7 @@ open class RpcRequest<RSerial: JSONSerializer, ESerial: JSONSerializer>: Request
     }
 
     @discardableResult open func response(queue: DispatchQueue? = nil, completionHandler: @escaping (RSerial.ValueType?, CallError<ESerial.ValueType>?) -> Void) -> Self {
-        self.request.validate().response(queue: queue) { response in
+        self.request.validate().response { response in
             if let error = response.error {
                 completionHandler(nil, self.handleResponseError(response.response, data: response.data!, error: error))
             } else {
@@ -522,7 +521,7 @@ open class UploadRequest<RSerial: JSONSerializer, ESerial: JSONSerializer>: Requ
     }
 
     @discardableResult open func response(queue: DispatchQueue? = nil, completionHandler: @escaping (RSerial.ValueType?, CallError<ESerial.ValueType>?) -> Void) -> Self {
-        self.request.validate().response(queue: queue) { response in
+        self.request.validate().response { response in
             if let error = response.error {
                 completionHandler(nil, self.handleResponseError(response.response, data: response.data!, error: error))
             } else {
@@ -559,7 +558,7 @@ open class DownloadRequestFile<RSerial: JSONSerializer, ESerial: JSONSerializer>
     }
 
     @discardableResult open func response(queue: DispatchQueue? = nil, completionHandler: @escaping ((RSerial.ValueType, URL)?, CallError<ESerial.ValueType>?) -> Void) -> Self {
-        self.request.validate().response(queue: queue) { response in
+        self.request.validate().response { response in
             if let error = response.error {
                 completionHandler(nil, self.handleResponseError(response.response, data: self.errorMessage, error: error))
             } else {
@@ -596,7 +595,7 @@ open class DownloadRequestMemory<RSerial: JSONSerializer, ESerial: JSONSerialize
     }
 
     @discardableResult open func response(queue: DispatchQueue? = nil, completionHandler: @escaping ((RSerial.ValueType, Data)?, CallError<ESerial.ValueType>?) -> Void) -> Self {
-        self.request.validate().response(queue: queue) { response in
+        self.request.validate().response { response in
             if let error = response.error {
                 completionHandler(nil, self.handleResponseError(response.response, data: response.data, error: error))
             } else {
