@@ -21,18 +21,14 @@ open class DropboxTransportClient {
 
     public init(accessToken: String, baseHosts: [String: String]?, userAgent: String?, selectUser: String?, sessionDelegate: SessionDelegate? = nil, backgroundSessionDelegate: SessionDelegate? = nil, longpollSessionDelegate: SessionDelegate? = nil, serverTrustPolicyManager: ServerTrustManager? = nil, sharedContainerIdentifier: String? = nil, pathRoot: Common.PathRoot? = nil) {
         let config = URLSessionConfiguration.default
-    
+
         let delegate = sessionDelegate ?? SessionDelegate()
         let serverTrustPolicyManager = serverTrustPolicyManager ?? nil
         
         let manager = Session(configuration: config, delegate: delegate, startRequestsImmediately: false, serverTrustManager: serverTrustPolicyManager)
 
         let backgroundManager = { () -> Session in
-//            let backgroundConfig = URLSessionConfiguration.background(withIdentifier: "com.dropbox.SwiftyDropbox." + UUID().uuidString)
             let backgroundConfig = URLSessionConfiguration.default
-            if let sharedContainerIdentifier = sharedContainerIdentifier{
-                backgroundConfig.sharedContainerIdentifier = sharedContainerIdentifier
-            }
             if let backgroundSessionDelegate = backgroundSessionDelegate {
                 return Session(configuration: backgroundConfig, delegate: backgroundSessionDelegate, serverTrustManager: serverTrustPolicyManager)
             }
