@@ -489,7 +489,7 @@ open class RpcRequest<RSerial: JSONSerializer, ESerial: JSONSerializer>: Request
     @discardableResult open func response(queue: DispatchQueue? = .main, completionHandler: @escaping (RSerial.ValueType?, CallError<ESerial.ValueType>?) -> Void) -> Self {
         self.request.validate().response { response in
             if let error = response.error {
-                completionHandler(nil, self.handleResponseError(response.response, data: response.data!, error: error))
+                completionHandler(nil, self.handleResponseError(response.response, data: response.data, error: error))
             } else {
                 completionHandler(self.responseSerializer.deserialize(SerializeUtil.parseJSON(response.data!)), nil)
             }
@@ -521,7 +521,7 @@ open class UploadRequest<RSerial: JSONSerializer, ESerial: JSONSerializer>: Requ
     @discardableResult open func response(queue: DispatchQueue? = .main, completionHandler: @escaping (RSerial.ValueType?, CallError<ESerial.ValueType>?) -> Void) -> Self {
         self.request.validate().response { response in
             if let error = response.error {
-                completionHandler(nil, self.handleResponseError(response.response, data: response.data!, error: error))
+                completionHandler(nil, self.handleResponseError(response.response, data: response.data, error: error))
             } else {
                 completionHandler(self.responseSerializer.deserialize(SerializeUtil.parseJSON(response.data!)), nil)
             }
